@@ -1,0 +1,6 @@
+framework module Pods_CertificatePinningExample {
+  umbrella header "Pods-CertificatePinningExample-umbrella.h"
+
+  export *
+  module * { export * }
+}
