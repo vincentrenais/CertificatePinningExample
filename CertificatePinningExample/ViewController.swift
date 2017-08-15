@@ -24,8 +24,9 @@ class ViewController: UIViewController {
 
     private func enableCertificatePinning() {
         let certificates = getCertificates()
-        let trustPolicy = ServerTrustPolicy.pinCertificates(
-            certificates: certificates,
+        let publicKeys = extractPublicKeysFromCertificates(certificates)
+        let trustPolicy = ServerTrustPolicy.pinPublicKeys(
+            publicKeys: publicKeys,
             validateCertificateChain: true,
             validateHost: true)
         let trustPolicies = [ "www.apple.com": trustPolicy ]
@@ -37,11 +38,29 @@ class ViewController: UIViewController {
     }
 
     private func getCertificates() -> [SecCertificate] {
-        let url = Bundle.main.url(forResource: "appleCerts", withExtension: "cer")!
+        let url = Bundle.main.url(forResource: "appleCert", withExtension: "cer")!
         let localCertificate = try! Data(contentsOf: url) as CFData
         guard let certificate = SecCertificateCreateWithData(nil, localCertificate)
             else { return [] }
 
         return [certificate]
+    }
+
+    private func extractPublicKeysFromCertificates(_ certs: [SecCertificate]) -> [SecKey] {
+        var publicKeys: [SecKey] = []
+        var trust: SecTrust?
+        let policy = SecPolicyCreateBasicX509()
+        for cert in certs {
+            let status = SecTrustCreateWithCertificates(cert, policy, &trust)
+            var key: SecKey?
+            if status == errSecSuccess {
+                guard let finalTrust = trust else { return [] }
+                key = SecTrustCopyPublicKey(finalTrust)
+            }
+            guard let publicKey = key else { return [] }
+            publicKeys.append(publicKey)
+        }
+
+        return publicKeys
     }
 }
